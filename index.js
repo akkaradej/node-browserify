@@ -510,27 +510,40 @@ Browserify.prototype._createDeps = function (opts) {
     });
     
     mopts.globalTransform = [];
-    if (!this._bundled) {
+    if (!this._bundled && opts.detectGlobals !== false && opts.noParse !== true) {
         this.once('bundle', function () {
             self.pipeline.write({
-                transform: globalTr,
+                transform: self._createGlobalTr(opts),
                 global: true,
                 options: {}
             });
         });
     }
-    
-    var no = [].concat(opts.noParse).filter(Boolean);
-    var absno = no.filter(function(x) {
-        return typeof x === 'string';
-    }).map(function (x) {
-        return path.resolve(basedir, x);
+    return mdeps(mopts);
+};
+
+Browserify.prototype._createGlobalTr = function (opts) {
+    if (!opts) opts = {};
+    var basedir = defined(opts.basedir, process.cwd());
+    var vars = xtend({
+        process: function () { return "require('_process')" },
+    }, opts.insertGlobalVars);
+    if (opts.bundleExternal === false) {
+        delete vars.process;
+        delete vars.buffer;
+    }
+    var gopts = xtend(opts, {
+        debug: opts.debug,
+        always: opts.insertGlobals,
+        basedir: opts.commondir === false ? '/' : basedir,
+        vars: vars
     });
+    var no = [].concat(opts.noParse).filter(Boolean);
+    var absno = no
+        .filter(function (x) { return typeof x === 'string'; })
+        .map(function (x) { return path.resolve(basedir, x); });
     
     function globalTr (file) {
-        if (opts.detectGlobals === false) return through();
-        
-        if (opts.noParse === true) return through();
         if (no.indexOf(file) >= 0) return through();
         if (absno.indexOf(file) >= 0) return through();
         
@@ -547,26 +560,9 @@ Browserify.prototype._createDeps = function (opts) {
             }
         }
         
-        var vars = xtend({
-            process: function () { return "require('_process')" },
-        }, opts.insertGlobalVars);
-        
-        if (opts.bundleExternal === false) {
-            delete vars.process;
-            delete vars.buffer;
-        }
-        
-        return insertGlobals(file, xtend(opts, {
-            debug: opts.debug,
-            always: opts.insertGlobals,
-            basedir: opts.commondir === false
-                ? '/'
-                : opts.basedir || process.cwd()
-            ,
-            vars: vars
-        }));
+        return insertGlobals(file, gopts);
     }
-    return mdeps(mopts);
+    return globalTr;
 };
 
 Browserify.prototype._recorder = function (opts) {
