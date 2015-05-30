@@ -47,7 +47,7 @@
     "insert-module-globals": "^6.4.1",
     "isarray": "0.0.1",
     "labeled-stream-splicer": "^1.0.0",
-    "module-deps": "3.7.12",
+    "module-deps": "git://github.com/zoubin/module-deps.git#75e83f59056b7ef205694e5d93764cd99fe750f9",
     "os-browserify": "~0.1.1",
     "parents": "^1.0.1",
     "path-browserify": "~0.0.0",
